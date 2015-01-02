@@ -1,0 +1,53 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+
+use v5.16;
+use ojo;
+use Path::Class;
+
+$SF::BASE_URL = "https://sourceforge.net/rest/";
+
+die "$0 project-name [wiki-base]" unless @ARGV >= 1;
+my %args = (
+	project => $ARGV[0],
+	wiki => $ARGV[1] // 'wiki'
+);
+
+my $output_dir = dir( "$args{project}-$args{wiki}" );
+$output_dir->mkpath;
+
+my $page_urls = get_project_wiki_page_urls( %args );
+
+for my $page (@$page_urls) {
+	my $file = $output_dir->file( $page->{name} );
+
+	my $text = j(g( $page->{url} )->body)->{text};
+
+	say "Dumping: $page->{name}";
+	$file->spew( iomode => '>:encoding(UTF-8)', $text );
+}
+
+sub get_project_wiki_page_urls {
+	my (%args) = @_;
+	my $project = $args{project};
+	my $wiki_mountpoint = $args{wiki} // 'wiki';
+
+	my $rest_url = Mojo::URL->new();
+	my $path =  Mojo::Path->new()->parts([ "p", $project, $wiki_mountpoint, "/" ]);
+	$rest_url->path($path);
+	$rest_url = $rest_url->base( Mojo::URL->new($SF::BASE_URL) )->to_abs;
+
+	my $pages = j( g($rest_url)->body );
+
+	my $urls = [ map {
+			+{
+				name => $_,
+				url => $rest_url->clone->path( $_ )
+			} } @{ $pages->{pages} } ];
+
+	$urls;
+}
+
+

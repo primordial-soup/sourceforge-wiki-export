@@ -1,0 +1,8 @@
+#!/bin/sh
+
+CURDIR=`dirname "$0"`
+cd $CURDIR
+
+PROJECT_NAME="pdl"
+MOUNT_POINT="wiki"
+./dump-sf-wiki-json $PROJECT_NAME $MOUNT_POINT
