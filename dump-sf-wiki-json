@@ -23,10 +23,39 @@ my $page_urls = get_project_wiki_page_urls( %args );
 for my $page (@$page_urls) {
 	my $file = $output_dir->file( $page->{name} );
 
-	my $text = j(g( $page->{url} )->body)->{text};
+	my $body = g( $page->{url} )->body; # download
+	my $data = j( $body );              # get the JSON out
+
+	# {
+	#   related_artifacts => $urls, # Array[Str]
+	#   attachments       => [ {
+	#                             url => $url, # Str
+	#                             bytes => $bytes,  # Int
+	#                          }, # ... Array
+	#                        ],
+	#   title => $title, # Str
+	#   text  => $text,  # Str
+	# }
+
+	my $text = $data->{text}; # actual article text
 
 	say "Dumping: $page->{name}";
 	$file->spew( iomode => '>:encoding(UTF-8)', $text );
+
+	my @attachments = map { Mojo::URL->new($_->{url}) } @{ $data->{attachments} };
+
+	for my $attachment (@attachments) {
+		my $a_file = $output_dir->file( $attachment->path->[-1] );
+		my $a_data = g($attachment)->body;
+
+		$a_file->spew( iomode => '>:raw', $a_data );
+	}
+
+	my $file_related = $output_dir->file( "$page->{name}.related.json" );
+	if( @{ $data->{related_artifacts} } ) {
+		$file_related->spew( iomode => '>:encoding(UTF-8)',
+			j( $data->{related_artifacts} ) );
+	}
 }
 
 sub get_project_wiki_page_urls {
