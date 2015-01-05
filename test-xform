@@ -1,0 +1,4 @@
+cp -puvR pdl-wiki pdl-wiki-xform
+cd pdl-wiki-xform
+find -type f -print0 | grep -z -v '\.\(gif\|jpeg\|png\|json\)$' | xargs -0 rename -v 's,$,.md,'
+cp -puvR ../../zmughal-pdl.wiki/.git .
